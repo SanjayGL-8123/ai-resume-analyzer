@@ -8,9 +8,10 @@ Flask + MySQL + HTML app that scores a resume against a job description
 ai-resume-analyzer/
 ├── app.py                 # Flask backend + analysis logic
 ├── schema.sql              # MySQL database schema
-├── requirements.txt
-└── templates/
-    └── index.html           # Upload form + results UI
+├── index.html              # Web Interface UI + Privacy Modal
+├── PRIVACY_POLICY.md       # Application Privacy & Data Policy
+├── .gitignore              # Ignored files and folders
+└── requirements.txt
 ```
 
 ## Setup
@@ -49,7 +50,11 @@ ai-resume-analyzer/
   `analysis_results` tables) if the DB is reachable; the UI still shows
   results even if it isn't.
 
+## Privacy & Security
+For detailed information regarding how resume data is collected, stored locally, and processed safely, see [PRIVACY_POLICY.md](file:///c:/Users/Sanjay%20G%20L/Desktop/AI%20Resume%20Analyzer/PRIVACY_POLICY.md).
+
 ## Customizing
 - Add more terms to `SKILL_KEYWORDS` in `app.py` for your domain.
 - Swap TF-IDF for embeddings (e.g., sentence-transformers) for smarter
   semantic matching if you want a heavier ML dependency.
+
