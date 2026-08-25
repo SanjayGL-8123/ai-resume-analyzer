@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Resume Analyzer</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --card: #1e293b;
+    --accent: #6366f1;
+    --accent-2: #22d3ee;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --good: #22c55e;
+    --bad: #ef4444;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background: linear-gradient(160deg, var(--bg), #111827);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 40px 20px;
+  }
+  .container { max-width: 900px; margin: 0 auto; }
+  header { text-align: center; margin-bottom: 32px; }
+  header h1 {
+    font-size: 2.2rem;
+    margin-bottom: 6px;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  header p { color: var(--muted); }
+
+  .card {
+    background: var(--card);
+    border-radius: 14px;
+    padding: 28px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    margin-bottom: 24px;
+  }
+
+  label { display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.9rem; }
+  input[type="text"], textarea {
+    width: 100%;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid #334155;
+    background: #0f172a;
+    color: var(--text);
+    font-size: 0.95rem;
+    margin-bottom: 18px;
+    resize: vertical;
+  }
+  textarea { min-height: 140px; }
+
+  .file-drop {
+    border: 2px dashed #334155;
+    border-radius: 10px;
+    padding: 24px;
+    text-align: center;
+    cursor: pointer;
+    margin-bottom: 18px;
+    transition: border-color 0.2s;
+  }
+  .file-drop:hover { border-color: var(--accent); }
+  .file-drop input { display: none; }
+  .file-drop .filename { color: var(--accent-2); margin-top: 8px; font-size: 0.9rem; }
+
+  button {
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    color: white;
+    border: none;
+    padding: 14px 28px;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    width: 100%;
+    transition: opacity 0.2s;
+  }
+  button:hover { opacity: 0.9; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  #results { display: none; }
+
+  .score-wrap { text-align: center; margin-bottom: 24px; }
+  .score-circle {
+    width: 140px; height: 140px;
+    border-radius: 50%;
+    margin: 0 auto 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2rem; font-weight: 700;
+    background: conic-gradient(var(--accent) calc(var(--pct) * 1%), #334155 0);
+    position: relative;
+  }
+  .score-circle::before {
+    content: "";
+    position: absolute;
+    width: 110px; height: 110px;
+    background: var(--card);
+    border-radius: 50%;
+  }
+  .score-circle span { position: relative; z-index: 1; }
+  .score-label { color: var(--muted); font-size: 0.95rem; }
+
+  .skills-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .skills-col h3 { font-size: 1rem; margin-bottom: 10px; }
+  .tag {
+    display: inline-block;
+    padding: 5px 12px;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    margin: 3px 4px 3px 0;
+  }
+  .tag.matched { background: rgba(34,197,94,0.15); color: var(--good); border: 1px solid var(--good); }
+  .tag.missing { background: rgba(239,68,68,0.15); color: var(--bad); border: 1px solid var(--bad); }
+
+  .error { color: var(--bad); margin-top: 10px; font-size: 0.9rem; display: none; }
+  .status { color: var(--muted); font-size: 0.85rem; margin-top: 10px; text-align: center; }
+
+  @media (max-width: 600px) {
+    .skills-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>AI Resume Analyzer</h1>
+    <p>Upload a resume, paste a job description, and get an instant match score.</p>
+  </header>
+
+  <div class="card">
+    <form id="analyzeForm">
+      <label for="job_title">Job Title</label>
+      <input type="text" id="job_title" name="job_title" placeholder="e.g. Backend Developer" required>
+
+      <label for="job_description">Job Description</label>
+      <textarea id="job_description" name="job_description" placeholder="Paste the full job description here..." required></textarea>
+
+      <label for="resume">Resume File (PDF, DOCX, or TXT)</label>
+      <div class="file-drop" id="dropZone">
+        <div>📄 Click to choose a resume file</div>
+        <div class="filename" id="fileName"></div>
+        <input type="file" id="resume" name="resume" accept=".pdf,.docx,.txt" required>
+      </div>
+
+      <button type="submit" id="submitBtn">Analyze Resume</button>
+      <div class="error" id="errorMsg"></div>
+      <div class="status" id="statusMsg"></div>
+    </form>
+  </div>
+
+  <div class="card" id="results">
+    <div class="score-wrap">
+      <div class="score-circle" id="scoreCircle" style="--pct: 0;">
+        <span id="scoreValue">0%</span>
+      </div>
+      <div class="score-label">Match Score</div>
+    </div>
+
+    <div class="skills-grid">
+      <div class="skills-col">
+        <h3>✅ Matched Skills</h3>
+        <div id="matchedSkills"></div>
+      </div>
+      <div class="skills-col">
+        <h3>⚠️ Missing Skills</h3>
+        <div id="missingSkills"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('resume');
+const fileName = document.getElementById('fileName');
+const form = document.getElementById('analyzeForm');
+const submitBtn = document.getElementById('submitBtn');
+const errorMsg = document.getElementById('errorMsg');
+const statusMsg = document.getElementById('statusMsg');
+const results = document.getElementById('results');
+
+dropZone.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', () => {
+  fileName.textContent = fileInput.files.length ? fileInput.files[0].name : '';
+});
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  errorMsg.style.display = 'none';
+  statusMsg.textContent = '';
+  results.style.display = 'none';
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Analyzing...';
+
+  const formData = new FormData(form);
+
+  try {
+    const res = await fetch('/analyze', { method: 'POST', body: formData });
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.error || 'Something went wrong');
+    }
+
+    renderResults(data);
+  } catch (err) {
+    errorMsg.textContent = err.message;
+    errorMsg.style.display = 'block';
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Analyze Resume';
+  }
+});
+
+function renderResults(data) {
+  results.style.display = 'block';
+  const circle = document.getElementById('scoreCircle');
+  const value = document.getElementById('scoreValue');
+  circle.style.setProperty('--pct', data.score);
+  value.textContent = data.score + '%';
+
+  const matchedEl = document.getElementById('matchedSkills');
+  const missingEl = document.getElementById('missingSkills');
+  matchedEl.innerHTML = data.matched_skills.length
+    ? data.matched_skills.map(s => `<span class="tag matched">${s}</span>`).join('')
+    : '<span style="color:#94a3b8;">None found</span>';
+  missingEl.innerHTML = data.missing_skills.length
+    ? data.missing_skills.map(s => `<span class="tag missing">${s}</span>`).join('')
+    : '<span style="color:#94a3b8;">None — great fit!</span>';
+
+  statusMsg.textContent = data.saved
+    ? 'Result saved to database.'
+    : (data.db_error ? 'Analyzed (not saved: DB unavailable).' : '');
+}
+</script>
+</body>
+</html>
