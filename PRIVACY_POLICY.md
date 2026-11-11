@@ -1,4 +1,4 @@
-# Privacy Policy for AI Resume Analyzer
+gitadd # Privacy Policy for AI Resume Analyzer
 
 **Effective Date:** August 25, 2026  
 **Developer / Maintainer:** Sanjay G L  
